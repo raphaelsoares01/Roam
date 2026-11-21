@@ -1,0 +1,69 @@
+.liquid-add-button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  display: flex;
+  margin: 0;
+  max-width: 1329px;
+  padding: 0;
+  position: relative;
+  width: 100%;
+}
+
+.liquid-add-button__base {
+  display: block;
+  height: auto;
+  width: 100%;
+}
+
+.liquid-add-button__mask {
+  -webkit-mask-image: url("/figma/Add_and_right_text/Main.svg");
+  -webkit-mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  mask-image: url("/figma/Add_and_right_text/Main.svg");
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: 100% 100%;
+  aspect-ratio: 1329 / 130;
+  container-type: size;
+  display: block;
+  inset: 0;
+  overflow: hidden;
+  position: absolute;
+  width: 100%;
+}
+
+.liquid-add-button__vector {
+  display: block;
+  height: 507.692%;
+  max-width: none;
+  object-fit: fill;
+  position: absolute;
+  transition: transform 1.5s ease-out;
+  width: 192.625%;
+  will-change: transform;
+}
+
+.liquid-add-button__vector--one {
+  left: -120.625%;
+  top: 100%;
+  z-index: 3;
+}
+
+.liquid-add-button__vector--two {
+  left: 10.8%;
+  top: 100.384%;
+  z-index: 2;
+}
+
+.liquid-add-button:hover .liquid-add-button__vector--one,
+.liquid-add-button:focus-visible .liquid-add-button__vector--one {
+  transform: translate(92.4cqw, -132.307cqh);
+}
+
+.liquid-add-button:hover .liquid-add-button__vector--two,
+.liquid-add-button:focus-visible .liquid-add-button__vector--two {
+  transform: translate(-91.8cqw, -145.384cqh);
+}
