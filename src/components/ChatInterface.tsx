@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 
+import ReactMarkdown from "react-markdown";
 import "./ChatInterface.css";
 
 type Message = {
@@ -30,6 +31,7 @@ export default function ChatInterface({ onClose }: ChatInterfaceProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const nextMessageId = useRef(1);
+  const isSendingRef = useRef(false);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({
@@ -41,37 +43,72 @@ export default function ChatInterface({ onClose }: ChatInterfaceProps) {
     textareaRef.current?.focus();
   }, []);
 
-  async function sendMessage() {
-    const message = input.trim();
+  async function sendMessage(retryContent?: string) {
+    const message = (retryContent ?? input).trim();
 
-    if (!message || isLoading) return;
+    if (!message || isSendingRef.current) return;
 
-    const userMessage: Message = {
-      id: nextMessageId.current++,
-      role: "user",
-      content: message,
-    };
+    isSendingRef.current = true;
 
-    const updatedMessages = [...messages, userMessage];
+    let updatedMessages: Message[];
 
-    setMessages(updatedMessages);
-    setInput("");
+    if (retryContent !== undefined) {
+      // Remove a mensagem de erro anterior e recupera o histórico válido.
+      updatedMessages = messages.filter(
+        (item) => !item.failed
+      );
+
+      // Não adiciona novamente a mensagem se ela já estiver no histórico.
+      const lastMessage = updatedMessages[updatedMessages.length - 1];
+
+      if (
+        lastMessage?.role !== "user" ||
+        lastMessage.content !== message
+      ) {
+        updatedMessages = [
+          ...updatedMessages,
+          {
+            id: nextMessageId.current++,
+            role: "user",
+            content: message,
+          },
+        ];
+      }
+
+      setMessages(updatedMessages);
+    } else {
+      const userMessage: Message = {
+        id: nextMessageId.current++,
+        role: "user",
+        content: message,
+      };
+
+      updatedMessages = [...messages, userMessage];
+      setMessages(updatedMessages);
+      setInput("");
+    }
+
     setIsLoading(true);
 
     try {
+      // Envia somente as últimas 30 mensagens válidas.
+      const history = updatedMessages
+        .filter((item) => !item.failed)
+        .slice(-30)
+        .map(({ role, content }) => ({
+          role,
+          content,
+        }));
+
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          messages: updatedMessages
-            .filter((item) => !item.failed)
-            .map(({ role, content }) => ({
-              role,
-              content,
-            })),
+          messages: history,
         }),
+        signal: AbortSignal.timeout(90000),
       });
 
       const data = await response.json();
@@ -93,25 +130,30 @@ export default function ChatInterface({ onClose }: ChatInterfaceProps) {
       };
 
       setMessages((current) => [
-        ...current,
+        ...current.filter((item) => !item.failed),
         assistantMessage,
       ]);
     } catch (error) {
+      const errorMessage =
+        error instanceof Error && error.name === "TimeoutError"
+          ? "A IA demorou demais para responder. Tente novamente."
+          : error instanceof Error
+            ? error.message
+            : "Não foi possível obter uma resposta da IA.";
+
       const assistantMessage: Message = {
         id: nextMessageId.current++,
         role: "assistant",
-        content:
-          error instanceof Error
-            ? error.message
-            : "Não foi possível obter uma resposta da IA.",
+        content: errorMessage,
         failed: true,
       };
 
       setMessages((current) => [
-        ...current,
+        ...current.filter((item) => !item.failed),
         assistantMessage,
       ]);
     } finally {
+      isSendingRef.current = false;
       setIsLoading(false);
     }
   }
@@ -170,23 +212,32 @@ export default function ChatInterface({ onClose }: ChatInterfaceProps) {
           </div>
         ) : (
           <div className="chat-messages">
-            {messages.map((message) => (
+            {messages.map((message, index) => (
               <div
                 key={message.id}
                 className={`chat-message chat-message--${message.role}`}
               >
                 <div className="chat-message__bubble">
-                  {message.content}
+                  {message.role === "assistant" && !message.failed ? (
+                    <ReactMarkdown>{message.content}</ReactMarkdown>
+                  ) : (
+                    message.content
+                  )}
 
                   {message.failed && (
                     <button
                       type="button"
+                      className="chat-retry-button"
+                      disabled={isLoading}
                       onClick={() => {
-                        setInput(
-                          message.role === "assistant"
-                            ? messages[messages.indexOf(message) - 1]?.content || ""
-                            : ""
-                        );
+                        const previousUserMessage = messages
+                          .slice(0, index)
+                          .reverse()
+                          .find((item) => item.role === "user");
+
+                        if (previousUserMessage) {
+                          void sendMessage(previousUserMessage.content);
+                        }
                       }}
                     >
                       Tentar novamente
