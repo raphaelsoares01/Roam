@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import ChatInterface from "@/components/ChatInterface";
 import LiquidAddButton from "@/components/LiquidAddButton";
+import Hero from "@/screens/Hero";
 
 export default function Home() {
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -13,8 +14,11 @@ export default function Home() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-6">
-      <LiquidAddButton onClick={() => setIsChatOpen(true)} />
-    </main>
+    <>
+      <Hero onExplore={() => setIsChatOpen(true)} />
+      <section className="trip-planner-section" aria-label="Start planning a trip">
+        <LiquidAddButton onClick={() => setIsChatOpen(true)} />
+      </section>
+    </>
   );
 }
